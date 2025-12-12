@@ -5,39 +5,26 @@ import { fetchSessions } from '../api';
 import { Link } from 'react-router-dom';
 
 export default function SessionsList() {
-  const { data, isLoading, isError } = useQuery({
+  const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['sessions'],
-    queryFn: fetchSessions,
-    staleTime: 60 * 1000
+    queryFn: fetchSessions
   });
 
-  if (isLoading) return <div>Loading sessions…</div>;
-  if (isError) return <div>Error loading sessions.</div>;
-
-  const sessions = data?.data || data || [];
+  if (isLoading) return <div className="py-20 text-center">Loading sessions…</div>;
+  if (!sessions.length) return <div className="py-20 text-center text-neutralSoft-500">No sessions yet.</div>;
 
   return (
     <div>
-      <h2>Recent Sessions</h2>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {sessions.length === 0 && <div>No sessions yet.</div>}
+      <h1 className="text-2xl font-semibold mb-3">Recent Sessions</h1>
+      <div className="space-y-3">
         {sessions.map(s => (
-          <div key={s._id} style={{ border: '1px solid #eee', padding: 12, borderRadius: 6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{s.student_reg_no} • {s.createdBy || '—'}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>{new Date(s.borrowed_at).toLocaleString()}</div>
-              </div>
-              <div>
-                <Link to={`/sessions/${s._id}`}>Details</Link>
-              </div>
+          <div key={s._id} className="flex items-center justify-between p-4 border rounded-md">
+            <div>
+              <div className="font-medium">{s.student_reg_no} • {s.createdBy || '—'}</div>
+              <div className="text-xs text-neutralSoft-500">{new Date(s.borrowed_at).toLocaleString()}</div>
             </div>
-            <div style={{ marginTop: 8 }}>
-              {s.items && s.items.map(it => (
-                <div key={String(it.item_id) + it.sku} style={{ fontSize: 13 }}>
-                  {it.sku} — {it.name} × {it.qty}
-                </div>
-              ))}
+            <div>
+              <Link to={`/sessions/${s._id}`} className="btn btn-ghost small">Details</Link>
             </div>
           </div>
         ))}

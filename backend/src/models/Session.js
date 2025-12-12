@@ -1,16 +1,16 @@
-// src/models/Session.js
+// backend/src/models/Session.js
 const mongoose = require('mongoose');
 
 const SessionItemSchema = new mongoose.Schema({
   item_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
   sku: String,
   name: String,
-  qty: Number
+  qty: { type: Number, default: 0 }
 }, { _id: false });
 
 const ReturnedItemSchema = new mongoose.Schema({
   item_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
-  qty: Number,
+  qty: { type: Number, default: 0 },
   returned_at: Date
 }, { _id: false });
 
@@ -27,4 +27,5 @@ const SessionSchema = new mongoose.Schema({
   notes: String
 }, { timestamps: true });
 
-module.exports = mongoose.model('Session', SessionSchema);
+// safe export: use existing model if compiled (works with nodemon / HMR)
+module.exports = mongoose.models.Session || mongoose.model('Session', SessionSchema);

@@ -1,61 +1,34 @@
 // src/components/BorrowModal.jsx
 import React, { useState } from 'react';
-import { borrowSession } from '../api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export default function BorrowModal({ item, onClose }) {
+export default function BorrowModal({ item, onClose, onConfirm }) {
   const [regNo, setRegNo] = useState('');
   const [qty, setQty] = useState(1);
-  const queryClient = useQueryClient();
 
-  const m = useMutation({
-    mutationFn: borrowSession,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      onClose();
-      alert('Borrow recorded');
-    },
-    onError: (err) => {
-      alert('Error: ' + (err?.response?.data?.error || err.message));
-    }
-  });
-
-  const submit = async () => {
-    if (!regNo) return alert('Enter student registration number (reg_no)');
-    if (qty <= 0) return alert('Quantity must be at least 1');
-    if (qty > item.available_quantity) return alert('Quantity exceeds available stock');
-
-    const payload = {
-      student_reg_no: regNo,
-      items: [{ item_id: item._id, sku: item.sku, name: item.name, qty }],
-      createdBy: 'web-ui'
-    };
-    m.mutate(payload);
+  const submit = () => {
+    if (!regNo) return alert('Enter student reg no');
+    if (qty <= 0) return alert('Qty must be positive');
+    onConfirm({ student_reg_no: regNo, items: [{ item_id: item._id || item.id, sku: item.sku, name: item.name, qty }], due_date: null });
   };
 
   return (
-    <div style={{
-      position: 'fixed', left: 0, right: 0, top: 0, bottom: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.4)', zIndex: 50
-    }}>
-      <div style={{ width: 480, background: '#fff', padding: 18, borderRadius: 8 }}>
-        <h3>Borrow — {item.name}</h3>
-        <div style={{ marginTop: 8 }}>
-          <label>Student reg no</label>
-          <input value={regNo} onChange={e => setRegNo(e.target.value)} style={{ width: '100%', padding: 8, marginTop: 6 }} placeholder="e.g. 1162" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-[520px] bg-white rounded-xl p-6 card-strong">
+        <h3 className="text-lg font-semibold">Borrow — {item.name}</h3>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-neutralSoft-500">Student Reg No</label>
+            <input value={regNo} onChange={e=>setRegNo(e.target.value)} className="mt-1 w-full px-3 py-2 border rounded-md" placeholder="e.g. 1162" />
+          </div>
+          <div>
+            <label className="text-xs text-neutralSoft-500">Quantity</label>
+            <input type="number" value={qty} min="1" max={item.available_quantity || 9999} onChange={e=>setQty(Number(e.target.value))} className="mt-1 w-full px-3 py-2 border rounded-md" />
+          </div>
         </div>
 
-        <div style={{ marginTop: 8 }}>
-          <label>Quantity</label>
-          <input type="number" value={qty} min="1" max={item.available_quantity} onChange={e => setQty(Number(e.target.value))} style={{ width: 120, padding: 8, marginTop: 6 }} />
-        </div>
-
-        <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '6px 10px' }}>Cancel</button>
-          <button onClick={submit} style={{ padding: '6px 10px' }} disabled={m.isLoading}>
-            {m.isLoading ? 'Saving…' : 'Confirm Borrow'}
-          </button>
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="btn btn-ghost">Cancel</button>
+          <button onClick={submit} className="btn btn-primary">Confirm Borrow</button>
         </div>
       </div>
     </div>

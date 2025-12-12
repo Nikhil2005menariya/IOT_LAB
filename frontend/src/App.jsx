@@ -1,6 +1,7 @@
-// src/App.jsx (inside the function component)
+// src/App.jsx
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
 import ItemsList from './pages/ItemsList';
 import SessionsList from './pages/SessionsList';
 import SessionDetails from './pages/SessionDetails';
@@ -12,21 +13,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="container">
-        <header style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1>IoT Lab — Inventory</h1>
-            <p style={{ margin: 0 }}>Items available to borrow</p>
-          </div>
-          <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <Link to="/">Items</Link>
-            <Link to="/sessions">Sessions</Link>
-            <Link to="/analytics">Analytics</Link>
-            <button onClick={() => setShowReturnByStudent(true)}>Return by student</button>
-          </nav>
-        </header>
-
-        <main>
+      <div className="min-h-screen flex flex-col">
+        <Header onOpenReturnByStudent={() => setShowReturnByStudent(true)} />
+        <main className="flex-1 px-6 py-8 max-w-7xl mx-auto w-full">
           <Routes>
             <Route path="/" element={<ItemsList />} />
             <Route path="/sessions" element={<SessionsList />} />
@@ -34,9 +23,11 @@ export default function App() {
             <Route path="/analytics" element={<Analytics />} />
           </Routes>
         </main>
-
-        {showReturnByStudent && <ReturnByStudentModal onClose={() => setShowReturnByStudent(false)} />}
       </div>
+
+      {showReturnByStudent && (
+        <ReturnByStudentModal onClose={() => setShowReturnByStudent(false)} />
+      )}
     </BrowserRouter>
   );
 }

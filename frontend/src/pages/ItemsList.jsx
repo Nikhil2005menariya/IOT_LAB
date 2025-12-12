@@ -1,48 +1,63 @@
 // src/pages/ItemsList.jsx
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchItems } from '../api';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { fetchItems, borrowSession } from '../api';
+import ItemCard from '../components/ItemCard';
 import BorrowModal from '../components/BorrowModal';
+import Loader from '../components/Loader';
 
 export default function ItemsList() {
-  const { data, isLoading, isError } = useQuery({
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState(null);
+
+  const { data: items = [], isLoading } = useQuery({
     queryKey: ['items'],
-    queryFn: fetchItems,
-    staleTime: 1000 * 60 * 1
+    queryFn: fetchItems
   });
-  const [selectedItem, setSelectedItem] = useState(null);
 
-  if (isLoading) return <div>Loading items…</div>;
-  if (isError) return <div>Error loading items.</div>;
+  const borrowMut = useMutation({
+    mutationFn: (payload) => borrowSession(payload),
+    onSuccess: () => {
+      // refresh items and other queries
+      window.location.reload(); // quick hack; or use queryClient.invalidateQueries
+    }
+  });
 
-  const items = data || [];
+  const handleBorrow = (item) => {
+    setSelected(item);
+  };
+
+  const confirmBorrow = (payload) => {
+    borrowMut.mutate(payload);
+    setSelected(null);
+  };
+
+  const filtered = items.filter(i => !query || i.name.toLowerCase().includes(query.toLowerCase()) || (i.sku && i.sku.toLowerCase().includes(query.toLowerCase())));
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        <input placeholder="Search (not implemented)" style={{ padding: 8, flex: 1 }} />
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Inventory</h1>
+          <p className="text-sm text-neutralSoft-500">Items available to borrow</p>
+        </div>
+        <div className="w-80">
+          <input className="w-full px-4 py-2 border rounded-md" placeholder="Search items by name or SKU" value={query} onChange={e => setQuery(e.target.value)} />
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
-        {items.map(item => (
-          <div key={item._id} style={{ border: '1px solid #ddd', padding: 12, borderRadius: 8 }}>
-            <div style={{ fontWeight: 600 }}>{item.name}</div>
-            <div style={{ fontSize: 12, color: '#666' }}>{item.sku} • {item.location || '—'}</div>
-            <div style={{ marginTop: 8 }}>
-              <div>Available: <strong>{item.available_quantity}</strong></div>
-              <div>Total: {item.total_quantity}</div>
-            </div>
-            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-              <button onClick={() => { setSelectedItem(item); }} style={{ padding: '6px 10px' }}>
-                Borrow
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-20"><Loader size={28} /></div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map(item => (
+            <ItemCard key={item._id || item.id} item={item} onBorrow={handleBorrow} />
+          ))}
+        </div>
+      )}
 
-      {selectedItem && (
-        <BorrowModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      {selected && (
+        <BorrowModal item={selected} onClose={() => setSelected(null)} onConfirm={confirmBorrow} />
       )}
     </div>
   );

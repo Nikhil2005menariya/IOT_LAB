@@ -1,13 +1,12 @@
-// src/models/Event.js
 const mongoose = require('mongoose');
 
 const EventSchema = new mongoose.Schema({
-  type: { type: String, enum: ['borrow','return','adjust'], required: true },
-  session_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' },
-  item_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
-  qty: Number,
-  timestamp: { type: Date, default: Date.now },
-  user: String
-});
+  type: { type: String, enum: ['borrow','return'], required: true },
+  session_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
+  item_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
+  qty: { type: Number, required: true },
+  user: String,
+  timestamp: { type: Date, default: Date.now }
+}, { timestamps: true });
 
-module.exports = mongoose.model('Event', EventSchema);
+module.exports = mongoose.models.Event || mongoose.model('Event', EventSchema);

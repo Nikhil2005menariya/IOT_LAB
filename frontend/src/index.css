@@ -1,1 +1,35 @@
 @import "tailwindcss";
+/* src/index.css */
+
+/* small UI polish */
+html, body, #root {
+  height: 100%;
+}
+body {
+  @apply bg-neutralSoft-50 text-neutralSoft-900 antialiased;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* subtle card style */
+.card {
+  @apply bg-white shadow-card rounded-xl;
+}
+
+/* interactive controls */
+.btn {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-sm;
+}
+.btn-primary {
+  @apply bg-brand-500 text-white hover:bg-brand-600 focus:ring-2 focus:ring-brand-200;
+}
+.btn-ghost {
+  @apply bg-transparent text-neutralSoft-700 hover:bg-neutralSoft-100;
+}
+.small {
+  @apply text-xs px-2 py-1 rounded;
+}
+
+/* thin scrollbar for overflow boxes */
+.scrollbox {
+  scrollbar-width: thin;
+}
