@@ -35,19 +35,15 @@ db = mongo_client[MONGO_DBNAME]
 
 # FastAPI app + CORS
 app = FastAPI(title="IoT Lab — Gemini Analysis Service")
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # set to ["*"] for development if needed
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Initialize GenAI client if available
 if genai is None:
@@ -211,6 +207,7 @@ def _simple_restock_recommendations(top_borrowed, low_stock):
 
 
 # ---------- Endpoint ----------
+
 @app.post("/analysis/gemini-summary")
 def gemini_summary(req: AnalysisRequest):
     now = time.time()
