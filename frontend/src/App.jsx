@@ -1,33 +1,60 @@
-// src/App.jsx
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
-import ItemsList from './pages/ItemsList';
-import SessionsList from './pages/SessionsList';
-import SessionDetails from './pages/SessionDetails';
-import Analytics from './pages/Analytics';
-import ReturnByStudentModal from './components/ReturnByStudentModal';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import ItemsList from "./pages/ItemsList";
+import Analytics from "./pages/Analytics";
+import Borrowers from "./pages/Borrowers";
+import ProtectedRoute from "./auth/ProtectedRoute";
+import ReturnItems from "./pages/ReturnItems";
 
 export default function App() {
-  const [showReturnByStudent, setShowReturnByStudent] = useState(false);
-
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col">
-        <Header onOpenReturnByStudent={() => setShowReturnByStudent(true)} />
-        <main className="flex-1 px-6 py-8 max-w-7xl mx-auto w-full">
-          <Routes>
-            <Route path="/" element={<ItemsList />} />
-            <Route path="/sessions" element={<SessionsList />} />
-            <Route path="/sessions/:id" element={<SessionDetails />} />
-            <Route path="/analytics" element={<Analytics />} />
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        {/* Public */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
 
-      {showReturnByStudent && (
-        <ReturnByStudentModal onClose={() => setShowReturnByStudent(false)} />
-      )}
+        {/* System User */}
+      <Route
+        path="/items"
+        element={
+          <ProtectedRoute roles={['admin', 'system']}>
+            <ItemsList />
+          </ProtectedRoute>
+        }
+      />
+
+
+        {/* Admin */}
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute role="admin">
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/borrowers"
+          element={
+            <ProtectedRoute role="admin">
+              <Borrowers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/return"
+          element={
+            <ProtectedRoute roles={['system']}>
+              <ReturnItems />
+            </ProtectedRoute>
+          }
+        />
+
+
+      </Routes>
     </BrowserRouter>
   );
 }

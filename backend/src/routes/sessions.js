@@ -115,101 +115,95 @@ router.post('/:id/return', async (req, res) => {
       return res.status(400).json({ error: 'items array required' });
     }
 
-    // load session (Mongoose document so we can modify and save)
     const sessionDoc = await Session.findById(sessionId);
     if (!sessionDoc) return res.status(404).json({ error: 'Session not found' });
 
-    // Build map of currently held quantities from sessionDoc.items
-    const heldMap = new Map(); // itemIdStr -> { idx, qty }
-    sessionDoc.items.forEach((it, idx) => {
-      const idStr = String((it.item_id && it.item_id._id) ? it.item_id._id : it.item_id);
-      heldMap.set(idStr, { idx, qty: Number(it.qty || 0) });
+    // Build map of held quantities
+    const heldMap = new Map(); // itemId -> qty
+    sessionDoc.items.forEach(it => {
+      heldMap.set(String(it.item_id), Number(it.qty || 0));
     });
 
-    // Validation: ensure each requested return item is actually held and not returning more than held
-    for (const reqIt of items) {
-      const iid = String(reqIt.item_id);
-      const qtyToReturn = Number(reqIt.qty || 0);
-      if (!qtyToReturn || qtyToReturn <= 0) {
-        return res.status(400).json({ error: `Invalid qty for item ${iid}` });
+    // ---------- VALIDATION ----------
+    for (const r of items) {
+      const itemId = String(r.item_id);
+      const qty = Number(r.qty);
+
+      if (!qty || qty <= 0) {
+        return res.status(400).json({ error: 'Invalid return quantity' });
       }
-      const held = heldMap.get(iid);
-      if (!held) {
-        return res.status(400).json({ error: `Student does not hold item ${iid}` });
+
+      const heldQty = heldMap.get(itemId);
+      if (!heldQty) {
+        return res.status(400).json({ error: `Item not held: ${itemId}` });
       }
-      if (qtyToReturn > held.qty) {
-        return res.status(400).json({ error: `Return qty ${qtyToReturn} exceeds held qty ${held.qty} for item ${iid}` });
+
+      if (qty > heldQty) {
+        return res.status(400).json({
+          error: `Cannot return ${qty}. Only ${heldQty} remaining.`
+        });
       }
     }
 
-    // All validation passed -> apply updates in-memory to sessionDoc.items then persist
-    // We'll also create events and increment Item.available_quantity
-    const eventsToCreate = [];
-    for (const reqIt of items) {
-      const iid = String(reqIt.item_id);
-      const qtyToReturn = Number(reqIt.qty);
+    // ---------- APPLY RETURNS ----------
+    const events = [];
 
-      // update inventory available_quantity
-      await incrementItem(iid, qtyToReturn);
+    for (const r of items) {
+      const itemId = String(r.item_id);
+      const qty = Number(r.qty);
 
-      // create event
-      eventsToCreate.push({
+      // Update inventory
+      await incrementItem(itemId, qty);
+
+      // Update session items (rebuild safely)
+      sessionDoc.items = sessionDoc.items.map(it => {
+        if (String(it.item_id) !== itemId) return it;
+        return { ...it.toObject(), qty: it.qty - qty };
+      }).filter(it => it.qty > 0);
+
+      // Log return
+      sessionDoc.returned_items.push({
+        item_id: itemId,
+        qty,
+        returned_at: new Date()
+      });
+
+      events.push({
         type: 'return',
         session_id: sessionDoc._id,
-        item_id: new mongoose.Types.ObjectId(iid),
-        qty: qtyToReturn,
+        item_id: new mongoose.Types.ObjectId(itemId),
+        qty,
         timestamp: new Date(),
         user: user || 'system'
       });
-
-      // update sessionDoc.items in-place: reduce qty or remove entry
-      // find matching item entry index (use heldMap)
-      const held = heldMap.get(iid);
-      if (!held) {
-        // This should not happen because of earlier validation, but guard anyway
-        continue;
-      }
-      const idx = held.idx;
-      const currentQty = Number(sessionDoc.items[idx].qty || 0);
-      const newQty = currentQty - qtyToReturn;
-      if (newQty <= 0) {
-        // remove the item entry
-        sessionDoc.items.splice(idx, 1);
-        // After splicing, indexes in heldMap may be invalid; rebuild map after loop or mark for rebuild
-        // We'll rebuild heldMap after processing all items
-      } else {
-        sessionDoc.items[idx].qty = newQty;
-      }
-
-      // append to returned_items log
-      sessionDoc.returned_items.push({ item_id: reqIt.item_id, qty: qtyToReturn, returned_at: new Date() });
     }
 
-    // Insert events (bulk)
-    if (eventsToCreate.length > 0) {
-      await Event.insertMany(eventsToCreate);
+    if (events.length) {
+      await Event.insertMany(events);
     }
 
-    // Recompute session status: if no items left -> returned else partial/active
-    if (!sessionDoc.items || sessionDoc.items.length === 0) {
+    // ---------- STATUS ----------
+    if (sessionDoc.items.length === 0) {
       sessionDoc.status = 'returned';
       sessionDoc.returned_at = new Date();
     } else {
       sessionDoc.status = 'partial';
-      // keep returned_at null until fully returned
     }
 
-    // Save sessionDoc (persists modified items and returned_items)
     await sessionDoc.save();
 
-    // Return the updated session (populate item refs for convenience)
-    const respSession = await Session.findById(sessionDoc._id).populate('items.item_id', 'sku name').lean();
-    return res.json({ session: respSession });
+    const updated = await Session.findById(sessionDoc._id)
+      .populate('items.item_id', 'sku name')
+      .lean();
+
+    res.json({ session: updated });
+
   } catch (err) {
     console.error('return error', err);
-    return res.status(500).json({ error: err.message || 'Internal error' });
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 // GET list (recent)
 // GET /api/v1/sessions  (update existing handler)

@@ -1,103 +1,92 @@
-// frontend/src/components/AddItemModal.jsx
-import React, { useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 import { createItem } from '../api';
 
-export default function AddItemModal({ isOpen = false, onClose = () => {}, onSuccess = () => {} }) {
-  const [sku, setSku] = useState('');
-  const [name, setName] = useState('');
-  const [totalQty, setTotalQty] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) {
-      setSku('');
-      setName('');
-      setTotalQty('');
-      setDescription('');
-      setLocation('');
-    }
-  }, [isOpen]);
-
-  const mutation = useMutation({
-    mutationFn: (payload) => createItem(payload),
-    onSuccess: () => {
-      onSuccess();
-      onClose();
-    },
-    onError: (err) => {
-      const msg = err?.response?.data?.error || err?.message || 'Failed to create item';
-      alert(msg);
-    }
+export default function AddItemModal({ onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    sku: '',
+    name: '',
+    description: '',
+    location: '',
+    total_quantity: ''
   });
 
-  if (!isOpen) return null;
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
-  const handleSubmit = () => {
-    if (!name?.trim()) return alert('Item name is required');
-    const payload = {
-      sku: sku?.trim() || undefined,
-      name: name.trim(),
-      description: description?.trim() || undefined,
-      total_quantity: Number(totalQty || 0),
-      location: location?.trim() || undefined
-    };
-    mutation.mutate(payload);
+  const handleSubmit = async () => {
+    if (!form.name || !form.total_quantity) {
+      alert('Name and quantity are required');
+      return;
+    }
+
+    try {
+      await createItem({
+        sku: form.sku,
+        name: form.name,
+        description: form.description,
+        location: form.location || 'Shelf A1',
+        total_quantity: Number(form.total_quantity)
+      });
+
+      onSuccess();
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Failed to add item');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Add New Item</h3>
-          <button onClick={onClose} className="text-sm text-neutral-500 hover:text-neutral-700">Close</button>
-        </div>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white w-full max-w-md rounded-xl p-6">
+        <h2 className="text-lg font-semibold mb-4">Add New Item</h2>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="space-y-3">
           <input
-            className="w-full border rounded px-3 py-2"
+            name="sku"
             placeholder="SKU (optional)"
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
+            className="w-full border rounded-md px-3 py-2"
+            onChange={handleChange}
           />
+
           <input
-            className="w-full border rounded px-3 py-2"
+            name="name"
             placeholder="Item name *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            className="w-full border rounded-md px-3 py-2"
+            onChange={handleChange}
           />
+
           <input
-            className="w-full border rounded px-3 py-2"
-            placeholder="Total quantity (number)"
+            name="description"
+            placeholder="Description"
+            className="w-full border rounded-md px-3 py-2"
+            onChange={handleChange}
+          />
+
+          <input
+            name="location"
+            placeholder="Location (e.g. Shelf B2)"
+            className="w-full border rounded-md px-3 py-2"
+            onChange={handleChange}
+          />
+
+          <input
             type="number"
-            min="0"
-            value={totalQty}
-            onChange={(e) => setTotalQty(e.target.value)}
-          />
-          <input
-            className="w-full border rounded px-3 py-2"
-            placeholder="Location (shelf)"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-          <textarea
-            className="w-full border rounded px-3 py-2"
-            placeholder="Description (optional)"
-            rows="3"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            name="total_quantity"
+            placeholder="Total quantity *"
+            className="w-full border rounded-md px-3 py-2"
+            onChange={handleChange}
           />
         </div>
 
-        <div className="mt-4 flex justify-end gap-3">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={mutation.isLoading}
-          >
-            {mutation.isLoading ? 'Saving…' : 'Save Item'}
+        <div className="flex justify-end gap-3 mt-6">
+          <button className="btn btn-ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={handleSubmit}>
+            Add Item
           </button>
         </div>
       </div>

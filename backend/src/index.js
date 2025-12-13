@@ -9,6 +9,8 @@ const itemsRouter = require('./routes/items');
 const studentsRouter = require('./routes/students');
 const sessionsRouter = require('./routes/sessions');
 const analyticsRouter = require('./routes/analytics');
+const authRoutes = require('./routes/auth');
+const borrowersRoutes = require('./routes/borrowers');
 
 const app = express();
 app.use(express.json());
@@ -23,6 +25,8 @@ app.use('/api/v1/items', itemsRouter);
 app.use('/api/v1/students', studentsRouter);
 app.use('/api/v1/sessions', sessionsRouter);
 app.use('/api/v1/analytics', analyticsRouter);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/borrowers', borrowersRoutes);
 
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/iot_lab';
